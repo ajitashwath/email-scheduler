@@ -5,7 +5,7 @@ import { buildGoogleAuthUrl, exchangeCodeForProfile } from "../services/googleAu
 import { prisma } from "../config/prisma";
 import { env } from "../config/env";
 import { AuthedRequest } from "../middleware/auth";
-import { createEtherealTestAccount } from "../services/mailService";
+import { createEtherealTestAccount, getConfiguredSmtpSender } from "../services/mailService";
 
 const SESSION_COOKIE = "session";
 const OAUTH_STATE_COOKIE = "oauth_state";
@@ -49,11 +49,12 @@ export async function googleLoginCallback(req: Request, res: Response): Promise<
       // Give newly-registered users a working Ethereal sender out of the box
       // so the "Compose New Email" flow works immediately after first login,
       // without a manual setup step.
-      const ethereal = await createEtherealTestAccount();
+      const configuredSender = getConfiguredSmtpSender();
+      const ethereal = configuredSender ?? (await createEtherealTestAccount());
       await prisma.sender.create({
         data: {
           userId: user.id,
-          label: "Default Ethereal Sender",
+          label: configuredSender ? "Configured SMTP Sender" : "Default Ethereal Sender",
           ...ethereal,
           maxEmailsPerHour: env.DEFAULT_MAX_EMAILS_PER_HOUR,
         },

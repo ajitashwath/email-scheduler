@@ -30,11 +30,19 @@ const envSchema = z.object({
   // Slack OAuth
   SLACK_CLIENT_ID: z.string().optional(),
   SLACK_CLIENT_SECRET: z.string().optional(),
+  SLACK_SIGNING_SECRET: z.string().optional(),
+  SLACK_VERIFICATION_TOKEN: z.string().optional(),
   SLACK_REDIRECT_URI: z.string().default("http://localhost:4000/api/slack/callback"),
 
   // Ethereal / SMTP defaults (used when seeding default senders)
   ETHEREAL_SMTP_HOST: z.string().default("smtp.ethereal.email"),
   ETHEREAL_SMTP_PORT: z.coerce.number().default(587),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USERNAME: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM_ADDRESS: z.string().email().optional(),
 
   // Elasticsearch
   ELASTICSEARCH_NODE: z.string().default("http://localhost:9200"),

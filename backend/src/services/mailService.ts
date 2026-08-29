@@ -6,6 +6,7 @@
 // Ethereal credentials) and cached so we don't reconnect on every send.
 
 import nodemailer, { Transporter } from "nodemailer";
+import { env } from "../config/env";
 
 const transporterCache = new Map<string, Transporter>();
 
@@ -75,5 +76,19 @@ export async function createEtherealTestAccount() {
     smtpUser: account.user,
     smtpPass: account.pass,
     fromAddress: account.user,
+  };
+}
+
+export function getConfiguredSmtpSender() {
+  if (!env.SMTP_HOST || !env.SMTP_USERNAME || !env.SMTP_PASSWORD || !env.SMTP_FROM_ADDRESS) {
+    return null;
+  }
+
+  return {
+    smtpHost: env.SMTP_HOST,
+    smtpPort: env.SMTP_PORT,
+    smtpUser: env.SMTP_USERNAME,
+    smtpPass: env.SMTP_PASSWORD,
+    fromAddress: env.SMTP_FROM_ADDRESS,
   };
 }
