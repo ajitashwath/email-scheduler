@@ -1,0 +1,131 @@
+// Prisma schema for the ReachInbox email scheduler assignment.
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A logged-in user of the dashboard (via Google OAuth).
+model User {
+  id            String    @id @default(uuid())
+  googleId      String    @unique
+  email         String    @unique
+  name          String
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  senders       Sender[]
+  campaigns     Campaign[]
+  slackConnection SlackConnection?
+
+  @@map("users")
+}
+
+// A sending identity (an Ethereal mailbox in this assignment) tied to a user/tenant.
+// Rate limiting is enforced per-sender.
+model Sender {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label             String   // human readable name e.g. "Sender 1"
+  smtpHost          String
+  smtpPort          Int
+  smtpUser          String
+  smtpPass          String
+  fromAddress       String
+
+  maxEmailsPerHour  Int      @default(200)
+
+  createdAt         DateTime @default(now())
+  emails            EmailJob[]
+
+  @@map("senders")
+}
+
+// One "compose" batch submitted from the dashboard. Holds the shared config
+// (subject/body template, delay, hourly limit) for all recipients in the batch.
+model Campaign {
+  id                String     @id @default(uuid())
+  userId            String
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  subject           String
+  body              String     @db.Text
+  startTime         DateTime
+  delayBetweenMs    Int        // minimum delay between individual sends, in ms
+  hourlyLimit       Int?       // optional override of sender's default hourly limit
+
+  totalRecipients   Int
+  createdAt         DateTime   @default(now())
+
+  emails            EmailJob[]
+
+  @@map("campaigns")
+}
+
+enum EmailStatus {
+  SCHEDULED
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  RATE_LIMITED_DEFERRED
+}
+
+// One individual email to one recipient. This is the row that maps 1:1 to a
+// BullMQ job. jobId is stored so we can look the job up in the queue
+// (idempotency + restart recovery relies on this).
+model EmailJob {
+  id              String      @id @default(uuid())
+  campaignId      String
+  campaign        Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  senderId        String
+  sender          Sender      @relation(fields: [senderId], references: [id])
+
+  recipientEmail  String
+  subject         String
+  body            String      @db.Text
+
+  scheduledFor    DateTime    // the time this email is currently intended to send at
+  status          EmailStatus @default(SCHEDULED)
+
+  bullJobId       String?     @unique // BullMQ job id, set once enqueued. Used for idempotency.
+  attempts        Int         @default(0)
+  lastError       String?
+
+  sentAt          DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([status])
+  @@index([senderId, status])
+  @@index([scheduledFor])
+  @@map("email_jobs")
+}
+
+// Stores the Slack OAuth result (incoming webhook) per user, so we can notify
+// them the moment their hourly rate limit is hit.
+model SlackConnection {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  teamId        String
+  teamName      String
+  webhookUrl    String   // incoming webhook URL returned by Slack OAuth (chat:write via incoming-webhook scope)
+  channel       String?
+
+  accessToken   String   // bot token, stored in case we want chat.postMessage instead of webhook later
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("slack_connections")
+}
