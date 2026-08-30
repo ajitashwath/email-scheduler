@@ -70,6 +70,13 @@ JWT_SECRET=use-a-long-random-value
 FRONTEND_URL=http://localhost:3000
 ```
 
+Local development uses `backend/.env`. Deployment uses the separate
+`backend/.env.production` file locally, or the
+`backend/.env.production.example` template for a fresh setup. Render does not
+automatically read repository `.env` files, so copy the production values into
+the Render Web Service and Background Worker environment settings. Do not
+commit a file containing production secrets.
+
 ### Google OAuth
 Create a Web application OAuth client and add this exact authorized redirect URI:
 ```text
