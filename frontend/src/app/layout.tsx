@@ -3,7 +3,7 @@ import ThemeRegistry from "@/lib/ThemeRegistry";
 import AppProviders from "@/lib/AppProviders";
 
 export const metadata: Metadata = {
-  title: "ONB — Email Scheduler",
+  title: "Email Scheduler | Outbox Labs",
   description: "ReachInbox assignment: production-grade email job scheduler",
 };
 

@@ -48,7 +48,7 @@ docker compose -f docker\docker-compose.yml up -d
 The compose file starts:
 | Service | Address | Local development credentials |
 |---|---|---|
-| PostgreSQL | localhost:5432` | database `reachinbox_scheduler`, user `reachinbox`, password `reachinbox` |
+| PostgreSQL | `localhost:5432` | database `reachinbox_scheduler`, user `reachinbox`, password `reachinbox` |
 | Redis | `localhost:6379` | no password |
 | Elasticsearch | `localhost:9200` | security disabled |
 
