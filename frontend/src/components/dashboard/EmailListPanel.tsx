@@ -121,7 +121,7 @@ export default function EmailListPanel({
           </IconButton>
         </Tooltip>
         <Tooltip title="Refresh">
-          <IconButton size="small" onClick={onRefresh} sx={{ color: "text.secondary" }}>
+          <IconButton size="small" onClick={() => onRefresh()} sx={{ color: "text.secondary" }}>
             <RefreshIcon fontSize="small" />
           </IconButton>
         </Tooltip>
