@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   Box,
   TextField,
@@ -10,6 +12,12 @@ import {
   Typography,
   Skeleton,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -18,7 +26,8 @@ import StarBorderIcon from "@mui/icons-material/StarBorder";
 import InboxIcon from "@mui/icons-material/Inbox";
 import dayjs from "dayjs";
 import StatusPill from "./StatusPill";
-import { EmailStatus } from "@/types";
+import { EmailDetails, EmailStatus } from "@/types";
+import { api } from "@/lib/api";
 
 export interface EmailListRow {
   id: string;
@@ -27,6 +36,7 @@ export interface EmailListRow {
   timestamp: string | null; // scheduledFor or sentAt
   status: EmailStatus;
   preview?: string;
+  previewUrl?: string | null;
 }
 
 interface EmailListPanelProps {
@@ -58,6 +68,19 @@ export default function EmailListPanel({
   emptyLabel,
   emptyHint,
 }: EmailListPanelProps) {
+  const [selectedEmail, setSelectedEmail] = useState<EmailDetails | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+
+  const openEmail = async (id: string) => {
+    setOpeningId(id);
+    try {
+      const { data } = await api.get<{ email: EmailDetails }>(`/emails/${id}`);
+      setSelectedEmail(data.email);
+    } finally {
+      setOpeningId(null);
+    }
+  };
+
   return (
     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
       {/* Search bar header */}
@@ -143,6 +166,7 @@ export default function EmailListPanel({
             {rows.map((row) => (
               <ListItemButton
                 key={row.id}
+                onClick={() => void openEmail(row.id)}
                 sx={{
                   px: 2.5,
                   py: 1.7,
@@ -151,6 +175,7 @@ export default function EmailListPanel({
                   gap: 2,
                 }}
               >
+                {openingId === row.id && <CircularProgress size={16} sx={{ flexShrink: 0 }} />}
                 <Typography
                   variant="body2"
                   sx={{ width: 180, flexShrink: 0, fontWeight: 600 }}
@@ -182,6 +207,44 @@ export default function EmailListPanel({
           </List>
         )}
       </Box>
+
+      <Dialog
+        open={!!selectedEmail}
+        onClose={() => setSelectedEmail(null)}
+        fullWidth
+        maxWidth="md"
+      >
+        {selectedEmail && (
+          <>
+            <DialogTitle sx={{ pb: 1 }}>{selectedEmail.subject}</DialogTitle>
+            <DialogContent dividers>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                From: {selectedEmail.sender.fromAddress}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                To: {selectedEmail.recipientEmail}
+              </Typography>
+              <Typography sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {selectedEmail.body}
+              </Typography>
+              {selectedEmail.previewUrl && (
+                <Button
+                  component="a"
+                  href={selectedEmail.previewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  sx={{ mt: 2, px: 0 }}
+                >
+                  Open Ethereal preview
+                </Button>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setSelectedEmail(null)}>Close</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </Box>
   );
 }

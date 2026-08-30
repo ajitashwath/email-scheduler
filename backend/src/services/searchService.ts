@@ -10,15 +10,22 @@
 
 import { EmailJob } from "@prisma/client";
 import { esClient, EMAIL_INDEX } from "../config/elasticsearch";
+import { prisma } from "../config/prisma";
 
 export async function indexEmailJob(job: EmailJob & { userId?: string }): Promise<void> {
   try {
+    const userId = job.userId ?? (await prisma.campaign.findUnique({
+      where: { id: job.campaignId },
+      select: { userId: true },
+    }))?.userId;
+
     await esClient.index({
       index: EMAIL_INDEX,
       id: job.id,
       document: {
         id: job.id,
         campaignId: job.campaignId,
+        userId,
         senderId: job.senderId,
         recipientEmail: job.recipientEmail,
         subject: job.subject,
@@ -26,6 +33,8 @@ export async function indexEmailJob(job: EmailJob & { userId?: string }): Promis
         status: job.status,
         scheduledFor: job.scheduledFor,
         sentAt: job.sentAt,
+        previewUrl: job.previewUrl,
+        lastError: job.lastError,
         createdAt: job.createdAt,
       },
     });
@@ -38,16 +47,21 @@ export async function indexEmailJob(job: EmailJob & { userId?: string }): Promis
 export interface EmailSearchParams {
   query: string;
   status?: string;
+  userId?: string;
   from?: number;
   size?: number;
 }
 
 export async function searchEmailJobs(params: EmailSearchParams) {
-  const { query, status, from = 0, size = 20 } = params;
+  const { query, status, userId, from = 0, size = 20 } = params;
 
   const filter: Record<string, unknown>[] = [];
   if (status) {
-    filter.push({ term: { status } });
+    const statuses = status.split(",").filter(Boolean);
+    filter.push(statuses.length > 1 ? { terms: { status: statuses } } : { term: { status } });
+  }
+  if (userId) {
+    filter.push({ term: { userId } });
   }
 
   const result = await esClient.search({
@@ -72,11 +86,14 @@ export async function searchEmailJobs(params: EmailSearchParams) {
     sort: [{ createdAt: { order: "desc" } }],
   });
 
+  const hits = result.hits.hits.map((h) => h._source);
   return {
     total:
       typeof result.hits.total === "number"
         ? result.hits.total
         : result.hits.total?.value ?? 0,
-    hits: result.hits.hits.map((h) => h._source),
+    emails: hits,
+    page: Math.floor(from / size) + 1,
+    pageSize: size,
   };
 }

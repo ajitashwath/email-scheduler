@@ -119,7 +119,7 @@ async function processEmailJob(job: Job<EmailJobPayload>): Promise<void> {
   });
 
   try {
-    await sendEmailViaSender(
+    const sendResult = await sendEmailViaSender(
       {
         id: sender.id,
         smtpHost: sender.smtpHost,
@@ -133,9 +133,13 @@ async function processEmailJob(job: Job<EmailJobPayload>): Promise<void> {
       body
     );
 
+    if (sendResult.previewUrl) {
+      console.log(`[worker] Ethereal preview for ${emailJobId}: ${sendResult.previewUrl}`);
+    }
+
     const sent = await prisma.emailJob.update({
       where: { id: emailJobId },
-      data: { status: EmailStatus.SENT, sentAt: new Date(), lastError: null },
+      data: { status: EmailStatus.SENT, sentAt: new Date(), lastError: null, previewUrl: sendResult.previewUrl || null },
     });
     await indexEmailJob(sent);
   } catch (err) {

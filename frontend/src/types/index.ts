@@ -32,6 +32,20 @@ export interface SentEmail {
   sentAt: string | null;
   status: EmailStatus;
   lastError: string | null;
+  previewUrl: string | null;
+}
+
+export interface EmailDetails {
+  id: string;
+  recipientEmail: string;
+  subject: string;
+  body: string;
+  scheduledFor: string;
+  sentAt: string | null;
+  status: EmailStatus;
+  lastError: string | null;
+  sender: { fromAddress: string };
+  previewUrl: string | null;
 }
 
 export interface Sender {

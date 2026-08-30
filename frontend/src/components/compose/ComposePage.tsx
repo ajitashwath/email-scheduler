@@ -53,7 +53,7 @@ export default function ComposePage({ onClose, onScheduled }: ComposePageProps) 
   const [body, setBody] = useState("");
   const [delaySeconds, setDelaySeconds] = useState("");
   const [hourlyLimit, setHourlyLimit] = useState("");
-  const [sendAt, setSendAt] = useState<Dayjs>(dayjs().add(5, "minute"));
+  const [sendAt, setSendAt] = useState<Dayjs>(dayjs());
   const [attachmentNames, setAttachmentNames] = useState<string[]>([]);
 
   const [sendLaterAnchor, setSendLaterAnchor] = useState<HTMLElement | null>(null);
@@ -85,7 +85,15 @@ export default function ComposePage({ onClose, onScheduled }: ComposePageProps) 
   const handleSubmit = async () => {
     setError(null);
 
-    if (to.length === 0) {
+    // Free-solo Autocomplete only commits a typed value after Enter/blur.
+    // Include the visible input value so clicking Send works immediately.
+    const pendingRecipients = toInput
+      .split(/[\s,;]+/)
+      .map((email) => email.trim())
+      .filter(Boolean);
+    const recipients = Array.from(new Set([...to, ...pendingRecipients]));
+
+    if (recipients.length === 0) {
       setError("Add at least one recipient.");
       return;
     }
@@ -106,7 +114,7 @@ export default function ComposePage({ onClose, onScheduled }: ComposePageProps) 
         startTime: sendAt.toISOString(),
         delayBetweenMs: delaySeconds ? Number(delaySeconds) * 1000 : undefined,
         hourlyLimit: hourlyLimit ? Number(hourlyLimit) : undefined,
-        recipients: to,
+        recipients,
       });
       onScheduled();
     } catch (err) {
@@ -170,19 +178,10 @@ export default function ComposePage({ onClose, onScheduled }: ComposePageProps) 
             variant="outlined"
             size="small"
             onClick={(e) => setSendLaterAnchor(e.currentTarget)}
+            disabled={submitting}
             sx={{ borderColor: "primary.main", color: "primary.main", fontWeight: 600 }}
           >
-            {sendAt.isAfter(dayjs().add(1, "minute")) ? "Send Later" : "Send"}
-          </Button>
-
-          <Button
-            variant="contained"
-            size="small"
-            onClick={handleSubmit}
-            disabled={submitting}
-            sx={{ fontWeight: 600, minWidth: 90 }}
-          >
-            {submitting ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : "Send"}
+            {submitting ? <CircularProgress size={18} color="inherit" /> : "Send Later"}
           </Button>
         </Box>
 
@@ -241,7 +240,10 @@ export default function ComposePage({ onClose, onScheduled }: ComposePageProps) 
               <Button
                 size="small"
                 variant="outlined"
-                onClick={() => setSendLaterAnchor(null)}
+                onClick={() => {
+                  setSendLaterAnchor(null);
+                  void handleSubmit();
+                }}
                 sx={{ borderColor: "primary.main", color: "primary.main" }}
               >
                 Done
@@ -264,10 +266,11 @@ export default function ComposePage({ onClose, onScheduled }: ComposePageProps) 
           </Alert>
         )}
 
+        <Box sx={{ maxWidth: 904, width: "100%", mx: "auto" }}>
         <FieldRow label="From">
           <TextField
             fullWidth
-            value="Default Ethereal Sender"
+            value="Configured SMTP Sender"
             disabled
             slotProps={{ input: { readOnly: true } }}
           />
@@ -440,6 +443,7 @@ export default function ComposePage({ onClose, onScheduled }: ComposePageProps) 
             ))}
           </Box>
         )}
+        </Box>
       </Box>
     </Box>
   );
@@ -457,7 +461,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
         borderColor: "divider",
       }}
     >
-      <Typography variant="body2" sx={{ width: 70, flexShrink: 0, fontWeight: 600 }}>
+      <Typography variant="body2" sx={{ width: 32, flexShrink: 0, fontWeight: 600 }}>
         {label}
       </Typography>
       {children}

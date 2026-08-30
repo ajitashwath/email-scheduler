@@ -30,22 +30,28 @@ export default function DashboardPage() {
     }
   }, [authLoading, user, router]);
 
-  const fetchScheduled = useCallback(async () => {
-    const { data } = await api.get<PaginatedResponse<ScheduledEmail>>("/emails/scheduled");
+  const fetchScheduled = useCallback(async (query = "") => {
+    const endpoint = query.trim()
+      ? `/emails/search?q=${encodeURIComponent(query)}&status=SCHEDULED,QUEUED,SENDING,RATE_LIMITED_DEFERRED`
+      : "/emails/scheduled";
+    const { data } = await api.get<PaginatedResponse<ScheduledEmail>>(endpoint);
     setScheduled(data.emails);
     setScheduledTotal(data.total);
   }, []);
 
-  const fetchSent = useCallback(async () => {
-    const { data } = await api.get<PaginatedResponse<SentEmail>>("/emails/sent");
+  const fetchSent = useCallback(async (query = "") => {
+    const endpoint = query.trim()
+      ? `/emails/search?q=${encodeURIComponent(query)}&status=SENT,FAILED`
+      : "/emails/sent";
+    const { data } = await api.get<PaginatedResponse<SentEmail>>(endpoint);
     setSent(data.emails);
     setSentTotal(data.total);
   }, []);
 
-  const refreshAll = useCallback(async () => {
+  const refreshAll = useCallback(async (query = "") => {
     setListLoading(true);
     try {
-      await Promise.all([fetchScheduled(), fetchSent()]);
+      await Promise.all([fetchScheduled(query), fetchSent(query)]);
     } finally {
       setListLoading(false);
     }
@@ -53,8 +59,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional data refresh once the user is known
-    if (user) refreshAll();
-  }, [user, refreshAll]);
+    if (!user) return;
+    const timeout = window.setTimeout(() => void refreshAll(search), 250);
+    return () => window.clearTimeout(timeout);
+  }, [user, refreshAll, search]);
 
   if (authLoading || !user) {
     return (
@@ -78,14 +86,7 @@ export default function DashboardPage() {
     );
   }
 
-  const scheduledRows: EmailListRow[] = scheduled
-    .filter(
-      (e) =>
-        !search ||
-        e.recipientEmail.toLowerCase().includes(search.toLowerCase()) ||
-        e.subject.toLowerCase().includes(search.toLowerCase())
-    )
-    .map((e) => ({
+  const scheduledRows: EmailListRow[] = scheduled.map((e) => ({
       id: e.id,
       recipientEmail: e.recipientEmail,
       subject: e.subject,
@@ -93,20 +94,14 @@ export default function DashboardPage() {
       status: e.status,
     }));
 
-  const sentRows: EmailListRow[] = sent
-    .filter(
-      (e) =>
-        !search ||
-        e.recipientEmail.toLowerCase().includes(search.toLowerCase()) ||
-        e.subject.toLowerCase().includes(search.toLowerCase())
-    )
-    .map((e) => ({
+  const sentRows: EmailListRow[] = sent.map((e) => ({
       id: e.id,
       recipientEmail: e.recipientEmail,
       subject: e.subject,
       timestamp: e.sentAt,
       status: e.status,
       preview: e.lastError ?? undefined,
+      previewUrl: e.previewUrl,
     }));
 
   return (

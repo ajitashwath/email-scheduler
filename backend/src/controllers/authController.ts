@@ -64,6 +64,33 @@ export async function googleLoginCallback(req: Request, res: Response): Promise<
         where: { id: user.id },
         data: { name: profile.name, avatarUrl: profile.avatarUrl },
       });
+
+      // Keep an existing user's default sender aligned with configured SMTP.
+      // Without this, users created before SMTP was configured would continue
+      // sending through their previously generated Ethereal account.
+      const configuredSender = getConfiguredSmtpSender();
+      if (configuredSender) {
+        const sender = await prisma.sender.findFirst({
+          where: { userId: user.id },
+          orderBy: { createdAt: "asc" },
+        });
+
+        if (sender) {
+          await prisma.sender.update({
+            where: { id: sender.id },
+            data: { label: "Configured SMTP Sender", ...configuredSender },
+          });
+        } else {
+          await prisma.sender.create({
+            data: {
+              userId: user.id,
+              label: "Configured SMTP Sender",
+              ...configuredSender,
+              maxEmailsPerHour: env.DEFAULT_MAX_EMAILS_PER_HOUR,
+            },
+          });
+        }
+      }
     }
 
     const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: "7d" });

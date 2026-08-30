@@ -102,6 +102,7 @@ model EmailJob {
   lastError       String?
 
   sentAt          DateTime?
+  previewUrl      String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 

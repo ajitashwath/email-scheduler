@@ -30,6 +30,7 @@ export async function listScheduledEmails(req: AuthedRequest, res: Response): Pr
         subject: true,
         scheduledFor: true,
         status: true,
+        previewUrl: true,
       },
     }),
     prisma.emailJob.count({ where }),
@@ -63,6 +64,7 @@ export async function listSentEmails(req: AuthedRequest, res: Response): Promise
         sentAt: true,
         status: true,
         lastError: true,
+        previewUrl: true,
       },
     }),
     prisma.emailJob.count({ where }),
@@ -79,6 +81,35 @@ export async function searchEmails(req: AuthedRequest, res: Response): Promise<v
   const query = (req.query.q as string) ?? "";
   const status = req.query.status as string | undefined;
 
-  const result = await searchEmailJobs({ query, status });
+  const result = await searchEmailJobs({ query, status, userId: req.userId });
   res.json(result);
+}
+
+/** GET /api/emails/:id — open one scheduled or sent email in the dashboard. */
+export async function getEmailById(req: AuthedRequest, res: Response): Promise<void> {
+  const email = await prisma.emailJob.findFirst({
+    where: {
+      id: req.params.id,
+      campaign: { userId: req.userId },
+    },
+    select: {
+      id: true,
+      recipientEmail: true,
+      subject: true,
+      body: true,
+      scheduledFor: true,
+      sentAt: true,
+      status: true,
+      lastError: true,
+      previewUrl: true,
+      sender: { select: { fromAddress: true } },
+    },
+  });
+
+  if (!email) {
+    res.status(404).json({ error: "Email not found" });
+    return;
+  }
+
+  res.json({ email });
 }
