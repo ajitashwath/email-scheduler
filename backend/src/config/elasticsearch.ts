@@ -6,8 +6,9 @@ import { env } from "./env";
 
 export const esClient = new Client({
   node: env.ELASTICSEARCH_NODE,
-  auth:
-    env.ELASTICSEARCH_USERNAME && env.ELASTICSEARCH_PASSWORD
+  auth: env.ELASTICSEARCH_API_KEY
+    ? { apiKey: env.ELASTICSEARCH_API_KEY }
+    : env.ELASTICSEARCH_USERNAME && env.ELASTICSEARCH_PASSWORD
       ? { username: env.ELASTICSEARCH_USERNAME, password: env.ELASTICSEARCH_PASSWORD }
       : undefined,
 });

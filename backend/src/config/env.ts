@@ -14,6 +14,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
   // Redis (BullMQ)
+  REDIS_URL: z.string().url().optional(),
   REDIS_HOST: z.string().default("127.0.0.1"),
   REDIS_PORT: z.coerce.number().default(6379),
   REDIS_PASSWORD: z.string().optional(),
@@ -46,6 +47,7 @@ const envSchema = z.object({
 
   // Elasticsearch
   ELASTICSEARCH_NODE: z.string().default("http://localhost:9200"),
+  ELASTICSEARCH_API_KEY: z.string().optional(),
   ELASTICSEARCH_USERNAME: z.string().optional(),
   ELASTICSEARCH_PASSWORD: z.string().optional(),
   ELASTICSEARCH_INDEX: z.string().default("email_jobs"),
