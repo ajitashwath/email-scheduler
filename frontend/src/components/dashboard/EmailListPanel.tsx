@@ -13,17 +13,20 @@ import {
   Skeleton,
   Tooltip,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Button,
   CircularProgress,
+  Avatar,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import InboxIcon from "@mui/icons-material/Inbox";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
+import DeleteIcon from "@mui/icons-material/Delete";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import dayjs from "dayjs";
 import StatusPill from "./StatusPill";
 import { EmailDetails, EmailStatus } from "@/types";
@@ -211,20 +214,56 @@ export default function EmailListPanel({
       <Dialog
         open={!!selectedEmail}
         onClose={() => setSelectedEmail(null)}
-        fullWidth
-        maxWidth="md"
+        fullScreen
+        slotProps={{ paper: { sx: { bgcolor: "#fff" } } }}
       >
         {selectedEmail && (
           <>
-            <DialogTitle sx={{ pb: 1 }}>{selectedEmail.subject}</DialogTitle>
-            <DialogContent dividers>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                From: {selectedEmail.sender.fromAddress}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                To: {selectedEmail.recipientEmail}
-              </Typography>
-              <Typography sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                minHeight: 64,
+                px: { xs: 2, md: 4 },
+                borderBottom: "1px solid",
+                borderColor: "divider",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+                <IconButton onClick={() => setSelectedEmail(null)} aria-label="Back to emails">
+                  <ArrowBackIcon />
+                </IconButton>
+                <Typography variant="h6" noWrap sx={{ fontWeight: 500 }}>
+                  {selectedEmail.subject}
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", color: "text.secondary" }}>
+                <IconButton aria-label="Star email"><StarBorderIcon /></IconButton>
+                <IconButton aria-label="Archive email"><ArchiveOutlinedIcon /></IconButton>
+                <IconButton aria-label="Delete email"><DeleteIcon /></IconButton>
+                <IconButton aria-label="More actions"><MoreVertIcon /></IconButton>
+              </Box>
+            </Box>
+
+            <DialogContent sx={{ px: { xs: 3, md: 8 }, py: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, mb: 3 }}>
+                <Avatar sx={{ bgcolor: "primary.main", width: 32, height: 32 }}>
+                  {selectedEmail.sender.fromAddress[0]?.toUpperCase()}
+                </Avatar>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 700 }}>
+                    {selectedEmail.sender.fromAddress}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    to {selectedEmail.recipientEmail}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+                  {dayjs(selectedEmail.sentAt ?? selectedEmail.scheduledFor).format("MMM D, h:mm A")}
+                </Typography>
+              </Box>
+              <Typography sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxWidth: 760, ml: 6 }}>
                 {selectedEmail.body}
               </Typography>
               {selectedEmail.previewUrl && (
@@ -239,9 +278,6 @@ export default function EmailListPanel({
                 </Button>
               )}
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setSelectedEmail(null)}>Close</Button>
-            </DialogActions>
           </>
         )}
       </Dialog>
